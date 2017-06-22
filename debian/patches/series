@@ -1,0 +1,3 @@
+0001-Detect-debian-path-for-SYSCONFDIR-and-LIBEXECDIR.patch
+0002-Die-instead-of-exit-when-filesystem-device-is-read-o.patch
+0003-ignore-node-status-booted-by-slurm.patch

@@ -1,0 +1,21 @@
+Source: warewulf-nhc
+Section: admin
+Priority: optional
+Maintainer: EDF CCN-HPC <dsp-cspito-ccn-hpc@edf.fr>
+Uploaders: Antonio J. Russo <antonio-externe.russo@edf.fr>, Mehdi Dogguy <mehdi.dogguy@edf.fr>
+Build-Depends: debhelper (>= 8)
+Standards-Version: 3.9.5
+Homepage: http://warewulf.lbl.gov/trac/wiki/Node%20Health%20Check
+
+Package: warewulf-nhc
+Architecture: all
+Depends: ${misc:Depends}, mcelog
+Description: Warewulf Node Health Check System
+ This package contains the Warewulf Node Health Check system.
+ .
+ SLURM (and other resource managers) allow for the execution of a
+ script to determine if a node is "healthy" or "unhealthy" and
+ potentially mark unhealthy nodes as unavailable.  The scripts
+ contained in this package provide a flexible, extensible mechanism for
+ collecting health checks to be run on your cluster and specifying
+ which checks should be run on which nodes.

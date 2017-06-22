@@ -1,0 +1,4 @@
+etc/nhc/scripts
+usr/lib/warewulf-nhc/
+var/run/nhc/
+var/lib/nhc/

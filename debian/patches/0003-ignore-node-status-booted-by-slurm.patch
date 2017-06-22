@@ -1,0 +1,25 @@
+From: =?utf-8?q?R=C3=A9mi_Palancher?= <remi-externe.palancher@edf.fr>
+Date: Thu, 22 Jun 2017 16:28:07 +0200
+Subject: ignore node status booted by slurm
+
+---
+ helpers/node-mark-offline | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/helpers/node-mark-offline b/helpers/node-mark-offline
+index b053c89..75f7460 100644
+--- a/helpers/node-mark-offline
++++ b/helpers/node-mark-offline
+@@ -66,6 +66,12 @@ elif [[ "$NHC_RM" == "slurm" ]]; then
+     OLD_NOTE="${LINE[*]:2}"
+     case "$STATUS" in
+         alloc*|comp*|drain*|drng*|fail*|idle*|mix*|resume*|undrain*)
++            # Do not change state of booting nodes when booted by Slurm energy
++            # saving feature as it messes up Slurm node state power flags.
++            if [[ "$STATUS" == "idle#" ]]; then
++                echo "$0:  Not offlining $HOSTNAME: booted by Slurm"
++                exit 0
++            fi
+             case "$STATUS" in
+                 drain*|drng*|fail*)
+                     # If the node is already offline, and there is no old note, and

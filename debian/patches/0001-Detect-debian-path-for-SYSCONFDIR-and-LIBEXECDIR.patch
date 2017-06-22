@@ -1,0 +1,70 @@
+From: Thomas HAMEL <thomas-externe.hamel@edf.fr>
+Date: Mon, 29 Feb 2016 17:25:22 +0100
+Subject: Detect debian path for SYSCONFDIR and LIBEXECDIR
+
+---
+ nhc         | 9 +++++++--
+ nhc-genconf | 9 +++++++--
+ nhc-wrapper | 9 +++++++--
+ 3 files changed, 21 insertions(+), 6 deletions(-)
+
+diff --git a/nhc b/nhc
+index 8e3ea1d..604cde0 100755
+--- a/nhc
++++ b/nhc
+@@ -161,8 +161,13 @@ function nhcmain_init_env() {
+ 
+     # Static variables
+     PATH="/sbin:/usr/sbin:/bin:/usr/bin"
+-    SYSCONFIGDIR="/etc/sysconfig"
+-    LIBEXECDIR="/usr/libexec"
++    if [[ "x$(lsb_release -i -s 2> /dev/null)" == "xDebian" ]]; then
++        SYSCONFIGDIR="/etc/default"
++        LIBEXECDIR="/usr/lib/warewulf-nhc"
++    else
++        SYSCONFIGDIR="/etc/sysconfig"
++        LIBEXECDIR="/usr/libexec"
++    fi
+     if [[ -r /proc/sys/kernel/hostname ]]; then
+         read HOSTNAME < /proc/sys/kernel/hostname
+     elif [[ -z "$HOSTNAME" ]]; then
+diff --git a/nhc-genconf b/nhc-genconf
+index 6be7ad7..59afa8f 100755
+--- a/nhc-genconf
++++ b/nhc-genconf
+@@ -38,8 +38,13 @@ function dbg() {
+ function nhcgc_init_env() {
+     umask 0077
+     PATH="/sbin:/usr/sbin:/bin:/usr/bin"
+-    SYSCONFIGDIR="/etc/sysconfig"
+-    LIBEXECDIR="/usr/libexec"
++    if [[ "x$(lsb_release -i -s 2> /dev/null)" == "xDebian" ]]; then
++        SYSCONFIGDIR="/etc/default"
++        LIBEXECDIR="/usr/lib/warewulf-nhc"
++    else
++        SYSCONFIGDIR="/etc/sysconfig"
++        LIBEXECDIR="/usr/libexec"
++    fi
+     if [[ -r /proc/sys/kernel/hostname ]]; then
+         read HOSTNAME < /proc/sys/kernel/hostname
+     else
+diff --git a/nhc-wrapper b/nhc-wrapper
+index ef90ab4..20efb76 100755
+--- a/nhc-wrapper
++++ b/nhc-wrapper
+@@ -66,8 +66,13 @@ function nhc_parse_timespec() {
+ function nhcwrap_init_env() {
+     umask 0077
+     PATH="/sbin:/usr/sbin:/bin:/usr/bin"
+-    SYSCONFIGDIR="/etc/sysconfig"
+-    LIBEXECDIR="/usr/libexec"
++    if [[ "x$(lsb_release -i -s 2> /dev/null)" == "xDebian" ]]; then
++        SYSCONFIGDIR="/etc/default"
++        LIBEXECDIR="/usr/lib/warewulf-nhc"
++    else
++        SYSCONFIGDIR="/etc/sysconfig"
++        LIBEXECDIR="/usr/libexec"
++    fi
+     if [[ -r /proc/sys/kernel/hostname ]]; then
+         read HOSTNAME < /proc/sys/kernel/hostname
+     else
