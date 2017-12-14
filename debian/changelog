@@ -1,3 +1,9 @@
+warewulf-nhc (1.4.1-5sci8u1) scibian8; urgency=medium
+
+  * Scibian8 rebuild.
+
+ -- Thomas Hamel <thomas-externe.hamel@edf.fr>  Thu, 14 Dec 2017 10:58:32 +0100
+
 warewulf-nhc (1.4.1-5) jessie; urgency=medium
 
   * Add patch to ignore node status booted by Slurm
