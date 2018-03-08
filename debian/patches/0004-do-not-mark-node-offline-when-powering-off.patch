@@ -1,0 +1,19 @@
+--- a/helpers/node-mark-offline
++++ b/helpers/node-mark-offline
+@@ -75,6 +75,16 @@
+                         exit 0
+                     fi
+                     ;;
++                'idle~')
++                    # If the node is on power saving mode, do not touch it.
++                    echo "$0:  Not offlining $HOSTNAME: node is in powersave mode."
++                    exit 0
++                    ;;
++                'idle*')
++                    # If the node is changing state to idle, do not touch it.
++                    echo "$0:  Not offlining $HOSTNAME: node state is changing."
++                    exit 0
++                    ;;
+             esac
+             # If there's an old note that wasn't set by NHC, preserve it.
+             if [[ "$OLD_NOTE_LEADER" != "none" && "$OLD_NOTE_LEADER" != "$LEADER" ]]; then

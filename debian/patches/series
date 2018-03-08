@@ -1,3 +1,4 @@
 0001-Detect-debian-path-for-SYSCONFDIR-and-LIBEXECDIR.patch
 0002-Die-instead-of-exit-when-filesystem-device-is-read-o.patch
 0003-node-mark-offline-support-maint-state-for-slurm.patch
+0004-do-not-mark-node-offline-when-powering-off.patch
