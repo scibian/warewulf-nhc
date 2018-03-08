@@ -1,3 +1,9 @@
+warewulf-nhc (1.4.1-5sci8u3) scibian8; urgency=medium
+
+  * patches: Do not offline node when it is in powering off process
+
+ -- Benoit Boccard <benoit-externe.boccard@edf.fr>  Thu, 08 Mar 2018 10:51:35 +0100
+
 warewulf-nhc (1.4.1-5sci8u2) scibian8; urgency=medium
 
   * patches: Fix node offlining with slurm 17.11
