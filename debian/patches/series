@@ -3,3 +3,4 @@
 0003-node-mark-offline-support-maint-state-for-slurm.patch
 0004-do-not-mark-node-offline-when-powering-off.patch
 0005-update-do-not-mark-node-offline-when-powering-off.patch
+0006-fix_df_hang_issue_with_explicit_mountpoint_request.patch
