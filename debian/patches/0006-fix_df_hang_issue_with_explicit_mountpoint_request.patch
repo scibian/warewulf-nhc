@@ -1,0 +1,150 @@
+--- a/scripts/ww_fs.nhc
++++ b/scripts/ww_fs.nhc
+@@ -67,11 +67,12 @@ function nhc_fs_mounts_gather_data() {
+ }
+ 
+ function nhc_fs_df_gather_data() {
++    local FS=$1
+     local IFS DF_CNT i
+     local -a LINES FIELD
+ 
+     IFS=$'\n'
+-    LINES=( $($DF_CMD $DF_FLAGS) )
++    LINES=( $($DF_CMD $DF_FLAGS $FS) )
+     IFS=$' \t\n'
+ 
+     ((DF_CNT=0))
+@@ -110,11 +111,12 @@ function nhc_fs_df_gather_data() {
+ }
+ 
+ function nhc_fs_dfi_gather_data() {
++    local FS=$1
+     local IFS DFI_CNT i
+     local -a LINES FIELD
+ 
+     IFS=$'\n'
+-    LINES=( $($DFI_CMD $DFI_FLAGS) )
++    LINES=( $($DFI_CMD $DFI_FLAGS $FS) )
+     IFS=$' \t\n'
+ 
+     ((DFI_CNT=0))
+@@ -321,10 +323,16 @@ function check_fs_size() {
+     local MAX_SIZE=$3
+     local FS_SIZE
+     local i
++    local SKIP
+ 
+-    if [[ ${#DF_DEV[*]} -eq 0 ]]; then
+-        nhc_fs_df_gather_data
+-    fi
++    ((SKIP=0))
++    for ((i=0; i < ${#DF_DEV[*]}; i++)); do
++        if [[ "${DF_MNTPT[$i]}" == "$FS" ]]; then
++            ((SKIP++))
++            break
++        fi
++    done
++    (( $SKIP )) || nhc_fs_df_gather_data $FS
+ 
+     nhc_common_parse_size "$MIN_SIZE" MIN_SIZE
+     nhc_common_parse_size "$MAX_SIZE" MAX_SIZE
+@@ -361,10 +369,16 @@ function check_fs_free() {
+     local FS=$1
+     local MIN_FREE=$2
+     local FS_FREE FREE_PCT i
++    local SKIP
+ 
+-    if [[ ${#DF_DEV[*]} -eq 0 ]]; then
+-        nhc_fs_df_gather_data
+-    fi
++    ((SKIP=0))
++    for ((i=0; i < ${#DF_DEV[*]}; i++)); do
++        if [[ "${DF_MNTPT[$i]}" == "$FS" ]]; then
++            ((SKIP++))
++            break
++        fi
++    done
++    (( $SKIP )) || nhc_fs_df_gather_data $FS
+ 
+     for ((i=0; i < ${#DF_DEV[*]}; i++)); do
+         if [[ "${DF_MNTPT[$i]}" != "$FS" ]]; then
+@@ -404,10 +418,16 @@ function check_fs_used() {
+     local FS=$1
+     local MAX_USED=$2
+     local FS_USED i
++    local SKIP
+ 
+-    if [[ ${#DF_DEV[*]} -eq 0 ]]; then
+-        nhc_fs_df_gather_data
+-    fi
++    ((SKIP=0))
++    for ((i=0; i < ${#DF_DEV[*]}; i++)); do
++        if [[ "${DF_MNTPT[$i]}" == "$FS" ]]; then
++            ((SKIP++))
++            break
++        fi
++    done
++    (( $SKIP )) || nhc_fs_df_gather_data $FS
+ 
+     for ((i=0; i < ${#DF_DEV[*]}; i++)); do
+         if [[ "${DF_MNTPT[$i]}" != "$FS" ]]; then
+@@ -449,10 +469,16 @@ function check_fs_inodes() {
+     local MAX_INODES=$3
+     local FS_INODES
+     local i
++    local SKIP
+ 
+-    if [[ ${#DFI_DEV[*]} -eq 0 ]]; then
+-        nhc_fs_dfi_gather_data
+-    fi
++    ((SKIP=0))
++    for ((i=0; i < ${#DFI_DEV[*]}; i++)); do
++        if [[ "${DFI_MNTPT[$i]}" == "$FS" ]]; then
++            ((SKIP++))
++            break
++        fi
++    done
++    (( $SKIP )) || nhc_fs_dfi_gather_data $FS
+ 
+     nhc_common_parse_count "$MIN_INODES" MIN_INODES
+     nhc_common_parse_count "$MAX_INODES" MAX_INODES
+@@ -487,10 +513,16 @@ function check_fs_ifree() {
+     local FS=$1
+     local MIN_IFREE=$2
+     local FS_IFREE IFREE_PCT i
++    local SKIP
+ 
+-    if [[ ${#DFI_DEV[*]} -eq 0 ]]; then
+-        nhc_fs_dfi_gather_data
+-    fi
++    ((SKIP=0))
++    for ((i=0; i < ${#DFI_DEV[*]}; i++)); do
++        if [[ "${DFI_MNTPT[$i]}" == "$FS" ]]; then
++            ((SKIP++))
++            break
++        fi
++    done
++    (( $SKIP )) || nhc_fs_dfi_gather_data $FS
+ 
+     for ((i=0; i < ${#DFI_DEV[*]}; i++)); do
+         if [[ "${DFI_MNTPT[$i]}" != "$FS" ]]; then
+@@ -528,10 +560,16 @@ function check_fs_iused() {
+     local FS=$1
+     local MAX_IUSED=$2
+     local FS_IUSED i
++    local SKIP
+ 
+-    if [[ ${#DFI_DEV[*]} -eq 0 ]]; then
+-        nhc_fs_dfi_gather_data
+-    fi
++    ((SKIP=0))
++    for ((i=0; i < ${#DFI_DEV[*]}; i++)); do
++        if [[ "${DFI_MNTPT[$i]}" == "$FS" ]]; then
++            ((SKIP++))
++            break
++        fi
++    done
++    (( $SKIP )) || nhc_fs_dfi_gather_data $FS
+ 
+     for ((i=0; i < ${#DFI_DEV[*]}; i++)); do
+         if [[ "${DFI_MNTPT[$i]}" != "$FS" ]]; then
