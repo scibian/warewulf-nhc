@@ -1,0 +1,29 @@
+--- a/helpers/node-mark-offline
++++ b/helpers/node-mark-offline
+@@ -85,6 +85,26 @@ elif [[ "$NHC_RM" == "slurm" ]]; then
+                     echo "$0:  Not offlining $HOSTNAME: node state is changing."
+                     exit 0
+                     ;;
++                'mix#')
++                    # If the node is powered up (mix), do not touch it.
++                    echo "$0:  Not offlining $HOSTNAME: node is in $STATUS power saving mode."
++                    exit 0
++                    ;;
++                'mix~')
++                    # If the node is in mix power saving mode, do not touch it.
++                    echo "$0:  Not offlining $HOSTNAME: node is in $STATUS power saving mode."
++                    exit 0
++                    ;;
++                'alloc#')
++                    # If the node is in configured state (alloc), do not touch it.
++                    echo "$0:  Not offlining $HOSTNAME: node is in $STATUS power saving mode."
++                    exit 0
++                    ;;
++                'alloc~')
++                    # If the node is in alloc power saving mode, do not touch it.
++                    echo "$0:  Not offlining $HOSTNAME: node is in $STATUS power saving mode."
++                    exit 0
++                    ;;
+             esac
+             # If there's an old note that wasn't set by NHC, preserve it.
+             if [[ "$OLD_NOTE_LEADER" != "none" && "$OLD_NOTE_LEADER" != "$LEADER" ]]; then
