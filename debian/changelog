@@ -1,3 +1,9 @@
+warewulf-nhc (1.4.1-6sci9u1) scibian9; urgency=medium
+
+  * patches: Fix df hang issue with explicit mountpoint request
+
+ -- Kwame AMEDODJI <kwame-externe.amedodji@edf.fr>  Mon, 17 Feb 2020 10:22:51 +0100
+
 warewulf-nhc (1.4.1-5sci9u2) scibian9; urgency=medium
 
   * patches: Add patch to not touch state while powering on
