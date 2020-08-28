@@ -3,8 +3,6 @@
 # Michael Jennings <mej@lbl.gov>
 # 15 December 2010
 #
-# $Id: common.nhc 1793 2014-10-07 23:26:33Z mej $
-#
 
 PASSWD_DATA_SRC="${PASSWD_DATA_SRC:-/etc/passwd}"
 LOGIN_DEFS_SRC="${LOGIN_DEFS_SRC:-/etc/login.defs}"
@@ -154,29 +152,27 @@ if [[ "${BASH_VERSINFO[0]}" != "" && ${BASH_VERSINFO[0]} -ge 3 ]]; then
                 SUFFIX=${BASH_REMATCH[4]}
                 WIDTH=${#RSTART}
 
-                if [[ ${#RSTART} -lt ${#REND} ]]; then
+                if [[ -n "$PREFIX" && "${TARGET#${PREFIX}}" == "$TARGET" || -n "$SUFFIX" && "${TARGET%${SUFFIX}}" == "$TARGET" ]]; then
+                    dbg "$FUNCNAME:  Node \"$TARGET\" prefix/suffix do not match range [$PREFIX][${REND//?/#}][$SUFFIX]"
+                    continue
+                elif [[ 10#${#RSTART} -lt 10#${#REND} ]]; then
                     dbg "$FUNCNAME:  Node range has mismatched widths of start ($RSTART) and end ($REND).  Using ${#REND}."
                     WIDTH=${#REND}
                 fi
 
-                if [[ $RSTART -gt $REND ]]; then
+                if [[ 10#$RSTART -gt 10#$REND ]]; then
                     dbg "$FUNCNAME:  Node range has range reversed:  start ($RSTART) > end ($REND)."
                     j=$RSTART
                     RSTART=$REND
                     REND=$j
                 fi
-
-                for ((i=$RSTART; i <= $REND; i++)); do
-                    NODE="$i"
-                    while [[ ${#NODE} -lt $WIDTH ]]; do
-                        NODE="0$NODE"
-                    done
-                    NODE="$PREFIX$NODE$SUFFIX"
-                    if [[ $TARGET == $NODE ]]; then
-                        dbg "$FUNCNAME:  Found $TARGET in $RANGELIST."
-                        return 0
-                    fi
-                done
+                NODE="${TARGET#${PREFIX}}"
+                NODE="${NODE%${SUFFIX}}"
+                dbg "$GROUP:  $TARGET -> [$PREFIX] [$NODE] [$SUFFIX]"
+                if [[ 10#$RSTART -le 10#$NODE && 10#$NODE -le 10#$REND && 10#$WIDTH -eq 10#${#NODE} ]]; then
+                    dbg "$FUNCNAME:  Found $TARGET in $RANGELIST."
+                    return 0
+                fi
             else
                 # Bad syntax
                 log "$FUNCNAME:  Range not in pdsh syntax:  $GROUP"
@@ -223,29 +219,27 @@ else
                     # Check a node range
                     WIDTH=${#RSTART}
 
-                    if [[ ${#RSTART} -lt ${#REND} ]]; then
+                    if [[ -n "$PREFIX" && "${TARGET#${PREFIX}}" == "$TARGET" || -n "$SUFFIX" && "${TARGET%${SUFFIX}}" == "$TARGET" ]]; then
+                        dbg "$FUNCNAME:  Node \"$TARGET\" prefix/suffix do not match range [$PREFIX][${REND//?/#}][$SUFFIX]"
+                        continue
+                    elif [[ 10#${#RSTART} -lt 10#${#REND} ]]; then
                         dbg "$FUNCNAME:  Node range has mismatched widths of start ($RSTART) and end ($REND).  Using ${#REND}."
                         WIDTH=${#REND}
                     fi
 
-                    if [[ $RSTART -gt $REND ]]; then
+                    if [[ 10#$RSTART -gt 10#$REND ]]; then
                         dbg "$FUNCNAME:  Node range has range reversed:  start ($RSTART) > end ($REND)."
                         j=$RSTART
                         RSTART=$REND
                         REND=$j
                     fi
-
-                    for ((i=$RSTART; i <= $REND; i++)); do
-                        NODE="$i"
-                        while [[ ${#NODE} -lt $WIDTH ]]; do
-                            NODE="0$NODE"
-                        done
-                        NODE="$PREFIX$NODE$SUFFIX"
-                        if [[ $TARGET == $NODE ]]; then
-                            dbg "$FUNCNAME:  Found $TARGET in $RANGELIST."
-                            return 0
-                        fi
-                    done
+                    NODE="${TARGET#${PREFIX}}"
+                    NODE="${NODE%${SUFFIX}}"
+                    dbg "$GROUP:  $TARGET -> [$PREFIX] [$NODE] [$SUFFIX]"
+                    if [[ 10#$RSTART -le 10#$NODE && 10#$NODE -le 10#$REND && 10#$WIDTH -eq 10#${#NODE} ]]; then
+                        dbg "$FUNCNAME:  Found $TARGET in $RANGELIST."
+                        return 0
+                    fi
                 else
                     # Bad syntax
                     log "$FUNCNAME:  Range not in pdsh syntax:  $GROUP"
@@ -260,47 +254,83 @@ fi
 
 # Check to see if parameter ($1) matches glob ($2)
 function mcheck_glob() {
-    case "$1" in
-        $2) dbg "Glob match check:  $1 matches $2" ; return 0 ;;
-        *)  dbg "Glob match check:  $1 does not match $2" ; return 1 ;;
-    esac
+    if [[ "$1" == $2 ]]; then
+        dbg "Glob match check:  $1 matches $2"
+        return 0
+    else
+        dbg "Glob match check:  $1 does not match $2"
+        return 1
+    fi
 }
 
+# Check to see if an external node match expression ($2) contains a node ($1)
+function mcheck_external() {
+    local STRING="$2"
+    local MATCH="$3"
+    local MCHECK_CMD="${NHC_MCHECK_COMMAND[$1]}"
 
-# Detect regexp match (/.../), range match ({...}), or glob match (no
-# slashes or braces), and call the appropriate mcheck_*() function
-# above.
+    MCHECK_CMD="${MCHECK_CMD//\%h/\"$STRING\"}"
+    MCHECK_CMD="${MCHECK_CMD//\%m/\"$MATCH\"}"
+    eval $MCHECK_CMD &
+    wait $!
+    if [[ $? -eq 0 ]]; then
+        dbg "External match check:  $STRING matches %$MATCH%"
+        return 0
+    elif [[ $? -eq 127 ]]; then
+        die "External match check command \"$NHC_MCHECK_COMMAND\" not found or invalid"
+        # FIXME:  Force exit here?
+        return 127
+    else
+        dbg "External match check:  $STRING does not match %$MATCH%"
+        return 1
+    fi
+}
+
+# Detect regexp match (/.../), range match ({...}), external match
+# (%...%), or glob match (no delimiters), and call the appropriate
+# mcheck_*() function above.
 function mcheck() {
     local STRING="$1"
     local MATCH="$2"
+    local i NEG=0
 
-    # Check to see if the current host matches the check we just read.
-    if [[ "${MATCH#/}" != "$MATCH" && "${MATCH%/}" != "$MATCH" ]]; then
-        # Regexp match syntax.  Strip slashes, then match.
-        MATCH="${MATCH#/}"
-        MATCH="${MATCH%/}"
-        if mcheck_regexp "$STRING" "$MATCH" ; then
-            return 0
-        fi
-    elif [[ "${MATCH#\{}" != "$MATCH" && "${MATCH%\}}" != "$MATCH" ]]; then
-        # pdsh-style node range syntax.  Strip braces, then match.
-        MATCH="${MATCH#\{}"
-        MATCH="${MATCH%\}}"
-        if mcheck_range "$STRING" "$MATCH" ; then
-            return 0
-        fi
-    else
-        # Glob match syntax
-        if mcheck_glob "$STRING" "$MATCH" ; then
-            return 0
-        fi
+    # If the match expression starts with !, negate the match.
+    if [[ "${MATCH:0:1}" == '!' ]]; then
+        NEG=1
+        MATCH="${MATCH:1}"
     fi
-    return 1
+
+    # Regexp match syntax.  Strip slashes, then match.
+    if [[ "${MATCH:0:1}" == "/" && "${MATCH: -1:1}" == "/" ]]; then
+        MATCH="${MATCH:1:${#MATCH}-2}"
+        mcheck_regexp "$STRING" "$MATCH"
+        return $(((NEG>0) ? ($?^1) : ($?)))
+    fi
+
+    # pdsh-style node range syntax.  Strip braces, then match.
+    if [[ "${MATCH:0:1}" == '{' && "${MATCH: -1:1}" == '}' ]]; then
+        MATCH="${MATCH:1:${#MATCH}-2}"
+        mcheck_range "$STRING" "$MATCH"
+        return $(((NEG>0) ? ($?^1) : ($?)))
+    fi
+
+    # External match check.  Uses subprogram to determine match.  Delimiters are dynamic.
+    for ((i=0; i < ${#NHC_MCHECK_DELIM[*]}; i++)); do
+        if [[ "${MATCH:0:1}" == "${NHC_MCHECK_DELIM[$i]:0:1}" && "${MATCH: -1:1}" == "${NHC_MCHECK_DELIM[$i]: -1:1}" ]]; then
+            MATCH="${MATCH:1:${#MATCH}-2}"
+            mcheck_external $i "$STRING" "$MATCH"
+            return $(((NEG>0) ? ($?^1) : ($?)))
+        fi
+    done
+    # Glob match syntax (the default/fallback)
+    mcheck_glob "$STRING" "$MATCH"
+    return $(((NEG>0) ? ($?^1) : ($?)))
 }
 
 # Load configuration file from ($1)
 function nhc_load_conf() {
     local CONFFILE="$1"
+    local WS=$' \t'
     local LINE TARGET CHECK
 
     # Load configuration file and match lines to current hostname.
@@ -310,13 +340,13 @@ function nhc_load_conf() {
         CHECK="${LINE#*||}"
 
         # Trim whitespace.
-        while [[ "${TARGET## }" != "${TARGET%% }" ]]; do
-            TARGET="${TARGET## }"
-            TARGET="${TARGET%% }"
+        while [[ "${TARGET##[$WS]}" != "${TARGET%%[$WS]}" ]]; do
+            TARGET="${TARGET##[$WS]}"
+            TARGET="${TARGET%%[$WS]}"
         done
-        while [[ "${CHECK## }" != "${CHECK%% }" ]]; do
-            CHECK="${CHECK## }"
-            CHECK="${CHECK%% }"
+        while [[ "${CHECK##[$WS]}" != "${CHECK%%[$WS]}" ]]; do
+            CHECK="${CHECK##[$WS]}"
+            CHECK="${CHECK%%[$WS]}"
         done
 
         # Skip comments.
@@ -427,7 +457,7 @@ function nhc_common_get_userid() {
         eval $THIS_VAR=$THIS_USERID
     else
         # Fall back to getent invocation if passwd data is insufficient.
-        nhc_common_parse_passwd_entry "$(getent passwd \"$THIS_USERID\")" THIS_UID
+        nhc_common_parse_passwd_entry "$(getent passwd \"$THIS_UID\")" THIS_UID
         eval $THIS_VAR=${PWUID_USER[$THIS_UID]}
     fi
 }
@@ -461,20 +491,33 @@ function nhc_common_unparse_size() {
     local MULT=${3:-1024}
     local ERRVAR=$4
     local -a SUFFIXES=( k M G T P E )
-    local i RNDERR
+    local i TMPERR TRUNCERR=0
 
+    if [[ -z "$MULT" || "$MULT" -eq 0 ]]; then
+        die 1 "$FUNCNAME:  Syntax error:  Multiplier factor is 0"
+        exit 1
+    fi
     if [[ -n "$VAL" ]]; then
-        for ((i=0; VAL >= ${MULT} && i < ${#SUFFIXES[*]}-1; i++)); do
-            ((RNDERR=VAL%$MULT))
-            ((VAL/=${MULT}))
+        for ((i=0; VAL >= MULT && i < ${#SUFFIXES[*]}-1; i++)); do
+            TMPERR=$((VAL%MULT*100/MULT))
+            if (((TMPERR>50?100-TMPERR:TMPERR) > 10)); then
+                # If going another unit-prefix higher would give more than 10% truncation error, don't do it.
+                # (e.g., 1572864kB (1.5GB) should be converted to 1536MB instead of 1GB)
+                break
+            fi
+            ((TRUNCERR=VAL%MULT, VAL/=MULT))
         done
+        if ((TRUNCERR >= MULT/2)); then
+            # If truncation error is 50% or more, round up.
+            ((VAL++, TRUNCERR=MULT-TRUNCERR))
+        fi
         VAL="$VAL${SUFFIXES[$i]}B"
     fi
     if [[ -n "$VAR" ]]; then
         eval $VAR='"$VAL"'
     fi
     if [[ -n "$ERRVAR" ]]; then
-        eval $ERRVAR='"$RNDERR"'
+        eval $ERRVAR='"$TRUNCERR"'
     fi
 }
 
@@ -499,27 +542,40 @@ function nhc_common_parse_count() {
     fi
 }
 
-# Convert number of kilobytes into text representation with suffix (e.g., ${MULT} -> 1MB)
+# Convert number of something into text representation with suffix (e.g., 1000000 -> 1M)
 function nhc_common_unparse_count() {
     local VAL=$1
     local VAR=$2
     local MULT=${3:-1000}
     local ERRVAR=$4
     local -a SUFFIXES=( [0]='' [1]=k M G T P E )
-    local i RNDERR
+    local i TMPERR TRUNCERR=0
 
+    if [[ -z "$MULT" || "$MULT" -eq 0 ]]; then
+        die 1 "$FUNCNAME:  Syntax error:  Multiplier factor is 0"
+        exit 1
+    fi
     if [[ -n "$VAL" ]]; then
-        for ((i=0; VAL >= ${MULT} && i < ${#SUFFIXES[*]}; i++)); do
-            ((RNDERR=VAL%$MULT))
-            ((VAL/=${MULT}))
+        for ((i=0; VAL >= MULT && i < ${#SUFFIXES[*]}; i++)); do
+            TMPERR=$((VAL%MULT*100/MULT))
+            if (((TMPERR>50?100-TMPERR:TMPERR) > 10)); then
+                # If going another unit-prefix higher would give more than 10% truncation error, don't do it.
+                # (e.g., 1,500,000 (1.5M) should be converted to 1500k instead of 1M)
+                break
+            fi
+            ((TRUNCERR=VAL%MULT, VAL/=MULT))
         done
+        if ((TRUNCERR >= MULT/2)); then
+            # If truncation error is 50% or more, round up.
+            ((VAL++, TRUNCERR=MULT-TRUNCERR))
+        fi
         VAL="$VAL${SUFFIXES[$i]}"
     fi
     if [[ -n "$VAR" ]]; then
         eval $VAR='"$VAL"'
     fi
     if [[ -n "$ERRVAR" ]]; then
-        eval $ERRVAR='"$RNDERR"'
+        eval $ERRVAR='"$TRUNCERR"'
     fi
 }
 

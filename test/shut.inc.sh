@@ -3,14 +3,11 @@
 # Michael Jennings <mej@lbl.gov>
 # 29 June 2012
 #
-# $Id: shut.inc.sh 1753 2014-09-03 19:19:41Z mej $
-#
 
 # This is a simple unit test framework for BASH shell scripts.  The
-# interface is based on Perl's Test::More which is used by Warewulf.
-# SHUT stands for "SHell Unit Testing."  I almost named it the Shell
-# Testing Framework for Unix (STFU), but that seemed to make others
-# inexplicably angry....
+# interface is based on Perl's Test::More.  SHUT stands for "SHell
+# Unit Testing."  I almost named it the Shell Testing Framework for
+# Unix (STFU), but that seemed to make others inexplicably angry....
 
 SHUT_SKIPPING=0
 SHUT_CHECK_SKIP='if skipping ; then skip ; return 0 ; fi'

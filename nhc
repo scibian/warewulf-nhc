@@ -1,11 +1,29 @@
 #!/bin/bash
 #
-# Warewulf Node Health Check Script
+# LBNL Node Health Check Script
 #
 # Michael Jennings <mej@lbl.gov>
 # 13 December 2010
 #
-# $Id: nhc 1842 2014-12-02 01:16:11Z mej $
+# Copyright (c) 2011-2015, Michael Jennings <mej@eterm.org>
+#
+# LBNL Node Health Check (NHC), Copyright (c) 2015, The Regents of the
+# University of California, through Lawrence Berkeley National
+# Laboratory (subject to receipt of any required approvals from the
+# U.S. Dept. of Energy).  All rights reserved.
+#
+# If you have questions about your rights to use or distribute this
+# software, please contact Berkeley Lab's Innovation & Partnerships
+# Office at IPO@lbl.gov.
+#
+# NOTICE.  This Software was developed under funding from the
+# U.S. Department of Energy and the U.S. Government consequently
+# retains certain rights. As such, the U.S. Government has been
+# granted for itself and others acting on its behalf a paid-up,
+# nonexclusive, irrevocable, worldwide license in the Software to
+# reproduce, distribute copies to the public, prepare derivative
+# works, and perform publicly and display publicly, and to permit
+# other to do so.
 #
 
 # This is the driver program for the node health check script
@@ -32,11 +50,17 @@ function die() {
     log "ERROR:  $NAME:  Health check failed:  $*"
     syslog "Health check failed:  $*"
     syslog_flush
-    if [[ "$MARK_OFFLINE" == "1" && "$FAIL_CNT" == "0" ]]; then
+    if [[ -n "$NHC_RM" && "$MARK_OFFLINE" -eq 1 && "$FAIL_CNT" -eq 0 ]]; then
         eval $OFFLINE_NODE "'$HOSTNAME'" "'$*'"
     fi
     if [[ -n "$NHC_DETACHED" ]]; then
-        echo "$RET $*" > $RESULTFILE
+        if [[ -w "$RESULTFILE" ]]; then
+            echo "$RET $*" > $RESULTFILE
+        else
+            log "ERROR:  $NAME:  Unable to write to \"$RESULTFILE\" -- is ${RESULTFILE%/*} read-only?"
+            syslog "ERROR:  $NAME:  Unable to write to \"$RESULTFILE\" -- is ${RESULTFILE%/*} read-only?"
+            syslog_flush
+        fi
     elif [[ "$NHC_RM" == "sge" ]]; then
         echo "begin" >&$NHC_FD_OUT
         echo "$HOSTNAME:healthy:false" >&$NHC_FD_OUT
@@ -142,13 +166,9 @@ function kill_watchdog() {
     if [[ $WATCHDOG_PID -ne 0 ]]; then
         for i in 1 2 3 4 ; do
             dbg "Killing watchdog timer $WATCHDOG_PID -- Attempt #$i"
-            kill -s USR2 -- -$WATCHDOG_PID $WATCHDOG_PID 2>/dev/null || return 0
-            kill -s USR1 -- -$WATCHDOG_PID $WATCHDOG_PID 2>/dev/null || return 0
             kill -s INT -- -$WATCHDOG_PID $WATCHDOG_PID 2>/dev/null || return 0
-            kill -s PWR -- -$WATCHDOG_PID $WATCHDOG_PID 2>/dev/null || return 0
-            sleep 1
+            sleep 0.01 || sleep 1
         done
-        log "Killing hung watchdog timer process/group $WATCHDOG_PID"
         kill -s KILL -- -$WATCHDOG_PID $WATCHDOG_PID 2>/dev/null
     fi
     return 0
@@ -189,7 +209,7 @@ function nhcmain_init_env() {
 
     # Don't allow previous environment to leak in.  Must be done from /etc/sysconfig/nhc only.
     unset CONFDIR CONFFILE INCDIR HELPERDIR ONLINE_NODE OFFLINE_NODE LOGFILE DEBUG SILENT VERBOSE TIMEOUT
-    unset RESULTFILE MAX_SYS_UID NHC_RM NHC_CHECK_ALL NHC_CHECK_FORKED
+    unset RESULTFILE MAX_SYS_UID NHC_RM NHC_CHECK_ALL NHC_CHECK_FORKED EVAL_LINE
 
     if [[ -n "$NHC_DETACHED" ]]; then
         # We're running detached.
@@ -220,12 +240,14 @@ $UNDERLINE
  -a                Run ALL checks; don't exit on first failure (NHC_CHECK_ALL=1)
  -c <conffile>     Load config from <conffile> (default: <confdir>/<name>.conf)
  -d                Activate debugging output (i.e., DEBUG=1)
+ -e <check>        Evaluate check line <check> and exit immediately
  -f                Run checks in forked subprocesses (i.e., NHC_CHECK_FORKED=1)
  -l <logspec>      Log output to <logspec> (i.e., LOGFILE=<logspec>)
  -n <name>         Set program name to <name> (default: nhc); see -D & -c above
  -q                Run quietly (i.e., SILENT=1)
  -t <timeout>      Use timeout of <timeout> seconds (default: 10)
  -v                Run verbosely (i.e., VERBOSE=1)
+ -x                Run in eXtreme debug/trace mode (same as "bash -x")
 
  All other command line parameters, if any, must be environment variable
  settings in the form VARNAME=value.
@@ -249,12 +271,13 @@ function nhcmain_parse_cmdline() {
     local OPTION
 
     OPTIND=1
-    while getopts ":D:ac:dfhl:n:qt:v" OPTION ; do
+    while getopts ":D:ac:de:fhl:n:qt:vx" OPTION ; do
         case "$OPTION" in
             D) CONFDIR="$OPTARG" ; dbg "\$CONFDIR set to $CONFDIR." ;;
             a) NHC_CHECK_ALL=1 ; dbg "Force running of all checks." ;;
             c) CONFFILE="$OPTARG" ; dbg "\$CONFFILE set to $CONFFILE." ;;
             d) DEBUG=1 ; dbg "Debugging activated via -d option." ;;
+            e) EVAL_LINE="$OPTARG" ; dbg "Evaluating single check line:  $EVAL_LINE" ;;
             f) NHC_CHECK_FORKED=1 ; dbg "Checks will be run in forked subprocesses." ;;
             h) nhcmain_help ; exit 0 ;;
             l) LOGFILE="$OPTARG" ; dbg "\$LOGFILE set to $LOGFILE." ;;
@@ -262,6 +285,7 @@ function nhcmain_parse_cmdline() {
             q) SILENT=1 ; dbg "Silent mode activated via -q option." ;;
             t) TIMEOUT="$OPTARG" ; dbg "Timeout set to $TIMEOUT." ;;
             v) VERBOSE=1 ; dbg "Verbose mode activated via -v option." ;;
+            x) set -x ; dbg "BASH tracing active." ;;
             :) nhcmain_help ; eecho "$NAME:  ERROR:  Option -$OPTARG requires an argument." ; return 8 ;;
             \?) nhcmain_help ; eecho "$NAME:  ERROR:  Invalid option:  -$OPTARG" ; return 9 ;;
         esac
@@ -397,7 +421,7 @@ function nhcmain_find_rm() {
     fi
 
     if [[ -z "$NHC_RM" ]]; then
-        log "Unable to detect resource manager."
+        dbg "Unable to detect resource manager."
         return 1
     fi
 }
@@ -504,7 +528,6 @@ function nhcmain_set_watchdog() {
 }
 
 function nhcmain_spawn_detached() {
-    rm -f "$RESULTFILE" >/dev/null 2>&1
     export NHC_DETACHED=${BASHPID:-$$}
     exec -a ${NAME}-detached $0 </dev/null >/dev/null 2>&1
 }
@@ -527,10 +550,15 @@ function nhcmain_detach() {
         MSG=""
     fi
 
-    # Launch detached process (hopefully in its own session)
-    set -m
-    nhcmain_spawn_detached &
-    set +m
+    rm -f "$RESULTFILE" >/dev/null 2>&1
+    if [[ -e "$RESULTFILE" ]]; then
+        die 1 "Unable to overwrite/remove results file \"$RESULTFILE\" -- is ${RESULTFILE%/*} read-only?"
+    else
+        # Launch detached process (hopefully in its own session)
+        set -m
+        nhcmain_spawn_detached &
+        set +m
+    fi
 
     syslog_flush
     if [[ "$RC" != "0" ]]; then
@@ -592,7 +620,7 @@ function nhcmain_run_checks() {
 }
 
 function nhcmain_mark_online() {
-    if [[ "$MARK_OFFLINE" = "1" ]]; then
+    if [[ -n "$NHC_RM" && "$MARK_OFFLINE" -eq 1 ]]; then
         eval $ONLINE_NODE "'$HOSTNAME'"
     fi
 }
@@ -632,6 +660,11 @@ nhcmain_init_env
 nhcmain_parse_cmdline "$@" || exit 10
 nhcmain_load_sysconfig
 nhcmain_finalize_env
+if [[ -n "$EVAL_LINE" ]]; then
+    nhcmain_load_scripts
+    eval $EVAL_LINE
+    exit $?
+fi
 nhcmain_redirect_output
 nhcmain_check_conffile || exit 0
 if [[ "$NHC_RM" == "sge" ]]; then
