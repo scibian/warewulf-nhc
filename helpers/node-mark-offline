@@ -1,11 +1,9 @@
 #!/bin/bash
 #
-# Warewulf Node Health Check -- Node Offlining Helper
+# LBNL Node Health Check -- Node Offlining Helper
 #
 # Michael Jennings <mej@lbl.gov>
 # 16 September 2011
-#
-# $Id: node-mark-offline 1840 2014-11-24 20:42:02Z mej $
 #
 
 # This script is a simple pbsnodes wrapper that the node health check
@@ -65,9 +63,9 @@ elif [[ "$NHC_RM" == "slurm" ]]; then
     OLD_NOTE_LEADER="${LINE[1]}"
     OLD_NOTE="${LINE[*]:2}"
     case "$STATUS" in
-        alloc*|comp*|drain*|drng*|fail*|idle*|mix*|resume*|undrain*)
+        alloc*|comp*|drain*|drng*|fail*|idle*|maint*|mix*|resume*|undrain*)
             case "$STATUS" in
-                drain*|drng*|fail*)
+                drain*|drng*|fail*|maint*)
                     # If the node is already offline, and there is no old note, and
                     # we've not been told to ignore that, do not touch the node.
                     if [[ "$OLD_NOTE_LEADER" == "none" && "$IGNORE_EMPTY_NOTE" != "1" ]]; then

@@ -1,27 +1,27 @@
-%{!?_rel:%{expand:%%global _rel 0.r%(test "1845" != "0000" && echo "1845" || svnversion | sed 's/[^0-9].*$//' | grep '^[0-9][0-9]*$' || git svn find-rev `git show -s --pretty=format:%h` || echo 0000)}}
+%{!?_rel:%{expand:%%global _rel 0.1.4.2}}
 
 %{!?sname:%global sname nhc}
 %{!?nhc_script_dir:%global nhc_script_dir %{_sysconfdir}/%{sname}/scripts}
 %{!?nhc_helper_dir:%global nhc_helper_dir %{_libexecdir}/%{sname}}
 
-Summary: Warewulf Node Health Check System
-Name: warewulf-nhc
-Version: 1.4.1
+Summary: LBNL Node Health Check
+Name: lbnl-nhc
+Version: 1.4.2
 #Release: %{_rel}%{?dist}
 Release: 1%{?dist}
 License: US Dept. of Energy (BSD-like)
 Group: Applications/System
-URL: http://warewulf.lbl.gov/
-Source: http://warewulf.lbl.gov/downloads/releases/warewulf-nhc/%{name}-%{version}.tar.gz
+URL: https://github.com/mej/nhc/
+Source: https://github.com/mej/nhc/archive/%{name}-%{version}.tar.gz
 Packager: %{?_packager}%{!?_packager:Michael Jennings <mej@lbl.gov>}
-Vendor: %{?_vendorinfo}%{!?_vendorinfo:Warewulf Project (http://warewulf.lbl.gov/)}
-Distribution: %{?_distribution:%{_distribution}}%{!?_distribution:%{_vendor}}
+Vendor: %{?_vendorinfo}%{!?_vendorinfo:LBNL NHC Project (https://github.com/mej/nhc/)}
 Requires: bash
+Obsoletes: warewulf-nhc <= 1.4.2-1
 BuildArch: noarch
 BuildRoot: %{?_tmppath}%{!?_tmppath:/var/tmp}/%{name}-%{version}-%{release}-root
 
 %description
-This package contains the Warewulf Node Health Check system.
+This package contains the LBNL Node Health Check system.
 
 TORQUE (and other resource managers) allow for the execution of a
 script to determine if a node is "healthy" or "unhealthy" and
@@ -47,6 +47,20 @@ umask 0077
 
 %check
 %{__make} test
+
+
+%triggerpostun -p /bin/bash -- warewulf-nhc <= 1.4.2-1
+if [ $1 -gt 0 -a $2 -eq 0 ]; then
+    cd %{_sysconfdir}/%{sname}/scripts
+    for SCRIPT in ww_*.nhc.rpmsave ; do
+        if [ -e $SCRIPT ]; then
+            NEWSCRIPT=lbnl${SCRIPT##ww}
+            NEWSCRIPT=${NEWSCRIPT%%.rpmsave}
+            echo warning: Auto-fixing script naming due to modified script ${SCRIPT%%.rpmsave}
+            mv -v $NEWSCRIPT $NEWSCRIPT.rpmnew && mv -v $SCRIPT $NEWSCRIPT
+        fi
+    done 2>/dev/null
+fi
 
 
 %clean

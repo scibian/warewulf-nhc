@@ -1,11 +1,9 @@
 #!/bin/bash
 #
-# Warewulf NHC Unit Tests
+# LBNL NHC Unit Tests
 #
 # Michael Jennings <mej@lbl.gov>
 # 29 June 2012
-#
-# $Id: nhc-test 1791 2014-10-02 22:43:50Z mej $
 #
 
 # This script is used to perform unit testing on the NHC driver script

@@ -1,9 +1,7 @@
-# NHC - Warewulf Filesystem Checks
+# LBNL NHC - Filesystem Checks
 #
 # Michael Jennings <mej@lbl.gov>
 # 15 December 2010
-#
-# $Id: ww_fs.nhc 1843 2014-12-02 02:00:31Z mej $
 #
 
 MOUNT_CMD="${MOUNT_CMD:-mount}"
@@ -67,11 +65,12 @@ function nhc_fs_mounts_gather_data() {
 }
 
 function nhc_fs_df_gather_data() {
-    local IFS DF_CNT i
+    local IFS DF_OUT DF_CNT i
     local -a LINES FIELD
 
+    DF_OUT=$($DF_CMD $DF_FLAGS)
     IFS=$'\n'
-    LINES=( $($DF_CMD $DF_FLAGS) )
+    LINES=( $DF_OUT )
     IFS=$' \t\n'
 
     ((DF_CNT=0))
@@ -110,11 +109,12 @@ function nhc_fs_df_gather_data() {
 }
 
 function nhc_fs_dfi_gather_data() {
-    local IFS DFI_CNT i
+    local IFS DFI_OUT DFI_CNT i
     local -a LINES FIELD
 
+    DFI_OUT=$($DFI_CMD $DFI_FLAGS)
     IFS=$'\n'
-    LINES=( $($DFI_CMD $DFI_FLAGS) )
+    LINES=( $DFI_OUT )
     IFS=$' \t\n'
 
     ((DFI_CNT=0))
@@ -214,42 +214,39 @@ function check_fs_mount() {
             fi
             if [[ ${#SRC_LIST[*]} > 0 ]]; then
                 for SRC in "${SRC_LIST[@]}" ; do
-                    if [[ "${SRC/#\!}" != "$SRC" ]]; then
-                        # Source begins with !.  Negate the check.
-                        if mcheck "${FS_DEV[$i]}" "${SRC/#\!}" ; then
-                            MSG="$FUNCNAME:  $FS mounted from ${FS_DEV[$i]} (matches \"${SRC/#\!}\") but shouldn't be"
-                            break 2
+                    if ! mcheck "${FS_DEV[$i]}" "$SRC" ; then
+                        MSG="$FUNCNAME:  $FS mounted from ${FS_DEV[$i]}"
+                        if [[ "${SRC:0:1}" == '!' ]]; then
+                            MSG="$MSG (should NOT match ${SRC:1})"
+                        else
+                            MSG="$MSG (should match $SRC)"
                         fi
-                    elif ! mcheck "${FS_DEV[$i]}" "$SRC" ; then
-                        MSG="$FUNCNAME:  $FS mounted from ${FS_DEV[$i]} (should be $SRC)"
                         break 2
                     fi
                 done
             fi
             if [[ ${#TYPE_LIST[*]} > 0 ]]; then
                 for TYPE in "${TYPE_LIST[@]}" ; do
-                    if [[ "${TYPE/#\!}" != "$TYPE" ]]; then
-                        # Type begins with !.  Negate the check.
-                        if mcheck "${FS_TYPE[$i]}" "${TYPE/#\!}" ; then
-                            MSG="$FUNCNAME:  $FS has type ${FS_TYPE[$i]} (matches \"${TYPE/#\!}\") but shouldn't"
-                            break 2
+                    if ! mcheck "${FS_TYPE[$i]}" "$TYPE" ; then
+                        MSG="$FUNCNAME:  $FS has incorrect type ${FS_TYPE[$i]}"
+                        if [[ "${TYPE:0:1}" == '!' ]]; then
+                            MSG="$MSG (should NOT match ${TYPE:1})"
+                        else
+                            MSG="$MSG (should match $TYPE)"
                         fi
-                    elif ! mcheck "${FS_TYPE[$i]}" "$TYPE" ; then
-                        MSG="$FUNCNAME:  $FS has incorrect type ${FS_TYPE[$i]} (should be $TYPE)"
                         break 2
                     fi
                 done
             fi
             if [[ ${#OPTIONS_LIST[*]} > 0 ]]; then
                 for OPTIONS in "${OPTIONS_LIST[@]}" ; do
-                    if [[ "${OPTIONS/#\!}" != "$OPTIONS" ]]; then
-                        # Options begin with !.  Negate the check.
-                        if mcheck "${FS_OPTS[$i]}" "${OPTIONS/#\!}" ; then
-                            MSG="$FUNCNAME:  $FS mount options incorrect (match \"${OPTIONS/#\!}\" but shouldn't)"
-                            break 2
+                    if ! mcheck "${FS_OPTS[$i]}" "$OPTIONS" ; then
+                        MSG="$FUNCNAME:  $FS mount options incorrect"
+                        if [[ "${OPTIONS:0:1}" == '!' ]]; then
+                            MSG="$MSG (should NOT match ${OPTIONS:1})"
+                        else
+                            MSG="$MSG (should match $OPTIONS)"
                         fi
-                    elif ! mcheck "${FS_OPTS[$i]}" "$OPTIONS" ; then
-                        MSG="$FUNCNAME:  $FS mount options incorrect (don't match \"$OPTIONS\")"
                         break 2
                     fi
                 done
@@ -267,7 +264,13 @@ function check_fs_mount() {
         fi
 
         # If we get here, the filesystem is either missing (empty $MSG) or mounted incorrectly (with $MSG).
-        if [[ "$REMOUNT" == "1" ]]; then
+        if [[ -z "$MSG" && ! -d "$FS" ]]; then
+            [[ "$SHELL" != ":" ]] && mkdir -p -m 0755 "$FS"
+            MSG="$FUNCNAME:  $FS not mounted; directory $FS missing (auto-fixed)"
+            if [[ "$REMOUNT" == "1" ]]; then
+                ${SHELL:-/bin/bash} -c "$MOUNT_CMD${MOUNT_OPTS:+ -o '$MOUNT_OPTS'} '$FS'" &
+            fi
+        elif [[ "$REMOUNT" == "1" ]]; then
             if [[ -n "$MSG" ]]; then
                 # FIXME:  This won't work if the source or type is what triggered the failure.  Do we care?
                 ${SHELL:-/bin/bash} -c "$MOUNT_CMD${MOUNT_OPTS:+ -o 'remount,$MOUNT_OPTS'} '$FS'" &

@@ -1,9 +1,7 @@
-# NHC - Warewulf DMI/SMBIOS Checks
+# LBNL NHC - DMI/SMBIOS Checks
 #
 # Michael Jennings <mej@lbl.gov>
 # 08 March 2013
-#
-# $Id: ww_dmi.nhc 1765 2014-09-12 06:02:44Z mej $
 #
 
 DMI_HANDLES=( )

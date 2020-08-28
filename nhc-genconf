@@ -5,7 +5,25 @@
 # Michael Jennings <mej@lbl.gov>
 # 26 August 2014
 #
-# $Id$
+# Copyright (c) 2011-2015, Michael Jennings <mej@eterm.org>
+#
+# LBNL Node Health Check (NHC), Copyright (c) 2015, The Regents of the
+# University of California, through Lawrence Berkeley National
+# Laboratory (subject to receipt of any required approvals from the
+# U.S. Dept. of Energy).  All rights reserved.
+#
+# If you have questions about your rights to use or distribute this
+# software, please contact Berkeley Lab's Innovation & Partnerships
+# Office at IPO@lbl.gov.
+#
+# NOTICE.  This Software was developed under funding from the
+# U.S. Department of Energy and the U.S. Government consequently
+# retains certain rights. As such, the U.S. Government has been
+# granted for itself and others acting on its behalf a paid-up,
+# nonexclusive, irrevocable, worldwide license in the Software to
+# reproduce, distribute copies to the public, prepare derivative
+# works, and perform publicly and display publicly, and to permit
+# other to do so.
 #
 
 # Generating configuration files for each node in your cluster can be
@@ -81,6 +99,7 @@ $UNDERLINE
  -d                Activate debugging output (i.e., DEBUG=1)
  -n <name>         Use named context <name> (default: $NAME)
  -v                Run verbosely (i.e., VERBOSE=1)
+ -x                Run in eXtreme debug/trace mode (same as "bash -x")
 
 
 EXAMPLES:
@@ -97,7 +116,7 @@ function nhcgc_parse_cmdline() {
     local OPTION
 
     OPTIND=1
-    while getopts ":H:b:c:dhn:v" OPTION ; do
+    while getopts ":H:b:c:dhn:vx" OPTION ; do
         case "$OPTION" in
             H) HOSTNAME="$OPTARG" ; dbg "\$HOSTNAME set to $HOSTNAME." ;;
             b) DMI_MATCH="$OPTARG" ; dbg "\$DMI_MATCH set to $DMI_MATCH." ;;
@@ -106,6 +125,7 @@ function nhcgc_parse_cmdline() {
             n) NAME="$OPTARG" ; dbg "\$NAME set to $NAME." ;;
             h) nhcgc_help ; exit 0 ;;
             v) VERBOSE=1 ; dbg "Verbose mode activated via -v option." ;;
+            x) set -x ; dbg "BASH tracing active." ;;
             -) break ;;
             :) nhcgc_help ; eecho "$NAME:  ERROR:  Option -$OPTARG requires an argument." ; exit -1 ;;
             \?) nhcgc_help ; eecho "$NAME:  ERROR:  Invalid option:  -$OPTARG" ; exit -1 ;;
@@ -309,16 +329,12 @@ function nhcgc_gen_config() {
     echo " $HOSTNAME || check_hw_cpuinfo $HW_SOCKETS $HW_CORES $HW_THREADS"
     nhc_common_unparse_size $HW_RAM_TOTAL HW_RAM_TOTAL 1024 ERR
     dbg "Found $HW_RAM_TOTAL RAM ($ERR rounding error)"
-    if [[ $ERR -ge 500 ]]; then
-        HW_RAM_TOTAL=$((${HW_RAM_TOTAL//[^0-9]}+1))${HW_RAM_TOTAL//[0-9]}
-    fi
-    echo " $HOSTNAME || check_hw_physmem $HW_RAM_TOTAL $HW_RAM_TOTAL 5%"
+    ERR=$((ERR*100/1024+3))
+    echo " $HOSTNAME || check_hw_physmem $HW_RAM_TOTAL $HW_RAM_TOTAL ${ERR}%"
     nhc_common_unparse_size $HW_SWAP_TOTAL HW_SWAP_TOTAL 1024 ERR
     dbg "Found $HW_SWAP_TOTAL swap ($ERR rounding error)"
-    if [[ $ERR -ge 500 ]]; then
-        HW_SWAP_TOTAL=$((${HW_SWAP_TOTAL//[^0-9]}+1))${HW_SWAP_TOTAL//[0-9]}
-    fi
-    echo " $HOSTNAME || check_hw_swap $HW_SWAP_TOTAL $HW_SWAP_TOTAL 5%"
+    ERR=$((ERR*100/1024+3))
+    echo " $HOSTNAME || check_hw_swap $HW_SWAP_TOTAL $HW_SWAP_TOTAL ${ERR}%"
     if [[ ${#HW_IB_DEV[*]} -gt 0 ]]; then
         for ((i=0; i<${#HW_IB_DEV[*]}; i++)); do
             echo " $HOSTNAME || check_hw_ib ${HW_IB_RATE[$i]} ${HW_IB_DEV[$i]}"

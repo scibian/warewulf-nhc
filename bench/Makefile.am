@@ -1,5 +1,3 @@
-# $Id: Makefile.am 1753 2014-09-03 19:19:41Z mej $
-
 AUTOMAKE_OPTIONS = foreign
 
 MAINTAINERCLEANFILES = Makefile.in
