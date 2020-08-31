@@ -1,0 +1,39 @@
+--- a/helpers/node-mark-offline	2020-09-01 09:50:47.831826550 +0200
++++ b/helpers/node-mark-offline	2020-09-01 09:49:51.096570038 +0200
+@@ -73,6 +73,36 @@
+                         exit 0
+                     fi
+                     ;;
++               'idle~')
++                    # If the node is on power saving mode, do not touch it.
++                    echo "$0:  Not offlining $HOSTNAME: node is in powersave mode."
++                    exit 0
++                    ;;
++               'idle*')
++                    # If the node is changing state to idle, do not touch it.
++                    echo "$0:  Not offlining $HOSTNAME: node state is changing."
++                    exit 0
++                    ;;
++                'mix#')
++                    # If the node is powered up (mix), do not touch it.
++                    echo "$0:  Not offlining $HOSTNAME: node is in $STATUS power saving mode."
++                    exit 0
++                    ;;
++                'mix~')
++                    # If the node is in mix power saving mode, do not touch it.
++                    echo "$0:  Not offlining $HOSTNAME: node is in $STATUS power saving mode."
++                    exit 0
++                    ;;
++                'alloc#')
++                    # If the node is in configured state (alloc), do not touch it.
++                    echo "$0:  Not offlining $HOSTNAME: node is in $STATUS power saving mode."
++                    exit 0
++                    ;;
++                'alloc~')
++                    # If the node is in alloc power saving mode, do not touch it.
++                    echo "$0:  Not offlining $HOSTNAME: node is in $STATUS power saving mode."
++                    exit 0
++                    ;;
+             esac
+             # If there's an old note that wasn't set by NHC, preserve it.
+             if [[ "$OLD_NOTE_LEADER" != "none" && "$OLD_NOTE_LEADER" != "$LEADER" ]]; then

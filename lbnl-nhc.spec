@@ -7,12 +7,16 @@
 Summary: LBNL Node Health Check
 Name: lbnl-nhc
 Version: 1.4.2
-#Release: %{_rel}%{?dist}
-Release: 1%{?dist}
+Release: 1%{?dist}_1.edf
 License: US Dept. of Energy (BSD-like)
 Group: Applications/System
 URL: https://github.com/mej/nhc/
 Source: https://github.com/mej/nhc/archive/%{name}-%{version}.tar.gz
+Patch0: 0001-die-instead-of-exit-when-filesystem-device-is-read-o.patch
+Patch1: 0002-do-not-mark-node-offline-when-powering-off.patch
+Patch2: 0003-fix-df-hang-issue-with-explicit-mountpoint-request.patch
+Patch3: 0004-fix-tests-issues-with-process-subsitution-files.patch
+
 Packager: %{?_packager}%{!?_packager:Michael Jennings <mej@lbl.gov>}
 Vendor: %{?_vendorinfo}%{!?_vendorinfo:LBNL NHC Project (https://github.com/mej/nhc/)}
 Requires: bash
@@ -32,7 +36,11 @@ which checks should be run on which nodes.
 
 
 %prep
-%setup
+%setup -q
+%patch0 -p1
+%patch1 -p1
+%patch2 -p1
+%patch3 -p1
 
 
 %build
@@ -82,3 +90,8 @@ test "$RPM_BUILD_ROOT" != "/" && %{__rm} -rf $RPM_BUILD_ROOT
 %config(noreplace) %{_sbindir}/%{sname}
 %config(noreplace) %{_sbindir}/%{sname}-genconf
 %config(noreplace) %{_sbindir}/%{sname}-wrapper
+
+
+%changelog
+* Tue Sep 01 2020 Pierre Trespeuch <pierre-externe.trespeuch@edf.fr> 1.4.2-1.el8_1.edf
+- Initial rpm release
