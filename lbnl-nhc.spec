@@ -44,7 +44,7 @@ which checks should be run on which nodes.
 
 
 %build
-%{configure} --prefix=/usr --sysconfdir=/etc --localstatedir=/var --libexecdir=/usr/lib/warewulf-nhc
+%{configure}
 %{__make} %{?mflags}
 
 
