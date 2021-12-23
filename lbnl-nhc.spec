@@ -16,6 +16,7 @@ Patch0: 0001-die-instead-of-exit-when-filesystem-device-is-read-o.patch
 Patch1: 0002-do-not-mark-node-offline-when-powering-off.patch
 Patch2: 0003-fix-df-hang-issue-with-explicit-mountpoint-request.patch
 Patch3: 0004-fix-tests-issues-with-process-subsitution-files.patch
+Patch4: 0005-node-mark-offline-consider-maint-as-online-nodes.patch
 
 Packager: %{?_packager}%{!?_packager:Michael Jennings <mej@lbl.gov>}
 Vendor: %{?_vendorinfo}%{!?_vendorinfo:LBNL NHC Project (https://github.com/mej/nhc/)}
@@ -41,6 +42,7 @@ which checks should be run on which nodes.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
 
 
 %build
