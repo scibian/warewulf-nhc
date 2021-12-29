@@ -7,7 +7,7 @@
 Summary: LBNL Node Health Check
 Name: lbnl-nhc
 Version: 1.4.2
-Release: 1%{?dist}_1.edf
+Release: 1%{?dist}_2.edf
 License: US Dept. of Energy (BSD-like)
 Group: Applications/System
 URL: https://github.com/mej/nhc/
@@ -95,5 +95,7 @@ test "$RPM_BUILD_ROOT" != "/" && %{__rm} -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Wed Dec 29 2021 Rémi Palancher <remi-externe.palancher@edf.fr> 1.4.2-1.el8_2.edf
+- Add patch to consider maintenance nodes as being online
 * Tue Sep 01 2020 Pierre Trespeuch <pierre-externe.trespeuch@edf.fr> 1.4.2-1.el8_1.edf
 - Initial rpm release
