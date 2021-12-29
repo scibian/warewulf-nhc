@@ -2,9 +2,10 @@ From: Rémi Palancher <remi-externe.palancher@edf.fr>
 Date: Thu, 23 Dec 2021 16:14:12 +0100
 Subject: node-mark-offline: consider maint as online nodes
 
-The node-mark-offline consider the node in a Slurm maintenance
+The node-mark-offline helper considers the node in a Slurm maintenance
 reservation as being already offline and ignore these nodes. We want
-these nodes to be checked by NHC during a maintenance.
+these nodes to be checked by NHC during a maintenance, so that
+post-maintenance benchmarks are not allocated broken nodes for example.
 ---
  helpers/node-mark-offline | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
